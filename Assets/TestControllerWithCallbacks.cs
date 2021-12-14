@@ -11,11 +11,6 @@ using Tradelite.SDK.Service.ConfigScope;
 
 public class TestControllerWithCallbacks : MonoBehaviour
 {
-#if LOCAL_DEV
-    private static GameIdentifier gameId = GameIdentifier.StockTiles_Local;
-#else
-    private static GameIdentifier gameId = GameIdentifier.StockTiles_Integration;
-#endif
 
     private GameConfiguration gameConfig;
     private string authToken;
@@ -30,7 +25,7 @@ public class TestControllerWithCallbacks : MonoBehaviour
     [ContextMenu("Test Configuration Service (CB)")]
     public void TestConfigServiceCB()
     {
-        GameConfigurationService service = GameConfigurationService.GetInstance(gameId, forceReload);
+        GameConfigurationService service = GameConfigurationService.GetInstance("StockTiles_Integration", forceReload);
         service.Get(
             (GameConfiguration gC) => { gameConfig = gC; Debug.Log("Configuration: " + gameConfig); },
             (BaseError e) => { Debug.Log($"Error: {e.message}"); }
@@ -48,19 +43,4 @@ public class TestControllerWithCallbacks : MonoBehaviour
             (BaseError e) => { Debug.Log($"Error: {e.message}"); }
         );
     }
-
-    // [ContextMenu("Test User Service (CB)")]
-    // public void TestUserServiceCB()
-    // {
-    //     Debug.Log($"Instantiating the UserService from the Tradelite SDK");
-    //     UserService service = UserService.GetInstance(gameConfig, authToken, forceReload);
-
-    //     Debug.Log("About to get the user info");
-    //     User user = await service.Get("12345");
-    //     Debug.Log($"User: {user}");
-
-    //     User[] users = await service.Select();
-    //     Debug.Log($"Users.Length: {users.Length}");
-    //     Debug.Log($"Users[0]: {users[0]}");
-    // }
 }

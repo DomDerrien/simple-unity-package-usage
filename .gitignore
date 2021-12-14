@@ -72,3 +72,6 @@ crashlytics-build.properties
 
 # MacOS
 .DS_Store
+
+# 2nd-party TextMesh Pro
+/[Aa]ssets/[Tt]extMesh*
