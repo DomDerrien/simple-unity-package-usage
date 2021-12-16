@@ -8,9 +8,13 @@ using UnityEngine.UI;
 using TMPro;
 
 using Tradelite.SDK.Model.ConfigScope;
+using Tradelite.SDK.Model.MatchingScope;
+using Tradelite.SDK.Model.KnowledgeScope;
 using Tradelite.SDK.Model.UserScope;
-using Tradelite.SDK.Service.UserScope;
 using Tradelite.SDK.Service.ConfigScope;
+using Tradelite.SDK.Service.MatchingScope;
+using Tradelite.SDK.Service.KnowledgeScope;
+using Tradelite.SDK.Service.UserScope;
 
 public class TestControllerAsync : MonoBehaviour
 {
@@ -33,8 +37,15 @@ public class TestControllerAsync : MonoBehaviour
     [SerializeField] TMP_InputField usernameSuffixInputField;
     [SerializeField] TMP_InputField runIdInputField;
     [SerializeField] TMP_InputField questionIdInputField;
-    [SerializeField] TMP_InputField instrumentIdInputField;
-    [SerializeField] TMP_InputField instrumentIdsInputField;
+    [SerializeField] TMP_InputField stockCardIdInputField;
+    [SerializeField] TMP_InputField stockCardIdsInputField;
+    [SerializeField] TMP_Text questionTextField;
+    [SerializeField] TMP_Text answerTextField;
+    [SerializeField] Button choice1Button;
+    [SerializeField] Button choice2Button;
+    [SerializeField] Button choice3Button;
+    [SerializeField] Button choice4Button;
+    [SerializeField] Button choice5Button;
 
     void Start()
     {
@@ -43,6 +54,7 @@ public class TestControllerAsync : MonoBehaviour
         gameIdInputField.text = "StockTiles_Local";
         usernameInputField.text = "ddd";
         passwordInputField.text = "ddd";
+        runIdInputField.text = "r-bbb";
         /**/
     }
 
@@ -133,7 +145,6 @@ public class TestControllerAsync : MonoBehaviour
         try
         {
             string id = await service.Create(user);
-            Debug.Log("user id: " + id);
             User copy = await service.Get(id);
             feedbackTextField.text = $"Player created with id {id} and credentials {{ {copy.email} / {user.password } }}.";
             Debug.Log($"Created Player: {user}");
@@ -153,11 +164,228 @@ public class TestControllerAsync : MonoBehaviour
         Debug.Log($"Logged Player: {user}");
     }
 
-    public void _E_GetMatchingRun() {}
+    public async void _E_GetMatchingRun()
+    {
+        MatchingRunService service = MatchingRunService.GetInstance(gameConfig, authToken, forceReload);
+
+        string runId = runIdInputField.text;
+        if (string.IsNullOrEmpty(runId)) 
+        {
+            feedbackTextField.text = $"Run identifier is missing...";
+            return;
+        }
+
+        try
+        {
+            MatchingRun run = await service.Get(runId);
+            feedbackTextField.text = run.ToString();
+            Debug.Log($"MatchingRun: {run}");
+        }
+        catch(Exception)
+        {
+            feedbackTextField.text = "Matching run retrieval failed...";
+        }
+    }
     
-    public void _E_GetMatchingQuestion() {}
+    public async void _E_GetQuestion()
+    {
+        QuestionService service = QuestionService.GetInstance(gameConfig, authToken, forceReload);
 
-    public void _F_GetInstrument() {}
+        string questionId = questionIdInputField.text;
+        if (string.IsNullOrEmpty(questionId)) 
+        {
+            feedbackTextField.text = $"Question identifier is missing...";
+            return;
+        }
 
-    public void _F_GetInstruments() {}
+        try
+        {
+            Question question = await service.Get(questionId);
+            feedbackTextField.text = question.ToString();
+            Debug.Log($"Question: {question}");
+        }
+        catch(Exception)
+        {
+            feedbackTextField.text = "Question retrieval failed...";
+        }
+    }
+
+    public async void _F_GetStockCard()
+    {
+        StockCardService service = StockCardService.GetInstance(gameConfig, authToken, forceReload);
+
+        string stockCardId = stockCardIdInputField.text;
+        if (string.IsNullOrEmpty(stockCardId)) 
+        {
+            feedbackTextField.text = $"StockCard identifier is missing...";
+            return;
+        }
+
+        try
+        {
+            StockCard stockCard = await service.Get(stockCardId);
+            feedbackTextField.text = $"Stock with symbol {stockCardId} has the name: {stockCard.name}";
+            Debug.Log($"StockCard: {stockCard}");
+        }
+        catch(Exception)
+        {
+            feedbackTextField.text = "StockCard retrieval failed...";
+        }
+    }
+
+    public async void _F_GetStockCards()
+    {
+        StockCardService service = StockCardService.GetInstance(gameConfig, authToken, forceReload);
+
+        string stockCardIds = stockCardIdsInputField.text;
+        if (string.IsNullOrEmpty(stockCardIds)) 
+        {
+            feedbackTextField.text = $"StockCard identifier list is missing...";
+            return;
+        }
+
+        try
+        {
+            Hashtable parameters = new Hashtable();
+            parameters.Add("id", stockCardIds.Split(','));
+            StockCard[] stockCards = await service.Select(parameters);
+            feedbackTextField.text = stockCards.ToString();
+        }
+        catch(Exception)
+        {
+            feedbackTextField.text = "StockCard retrieval failed...";
+        }
+    }
+    
+    protected int questionIdx = 0;
+    protected MatchingRun activeRun;
+
+    public async void _G_StartMatchingRun()
+    {
+        MatchingRunService service = MatchingRunService.GetInstance(gameConfig, authToken, forceReload);
+
+        string runId = runIdInputField.text;
+        if (string.IsNullOrEmpty(runId)) 
+        {
+            feedbackTextField.text = $"Run identifier is missing...";
+            return;
+        }
+
+        try
+        {
+            activeRun = await service.Get(runId);
+            questionIdx = 0;
+            showQuestion();
+        }
+        catch(Exception)
+        {
+            feedbackTextField.text = "Matching run retrieval failed...";
+        }
+    }
+
+    protected List<int> choiceDistribution;
+
+    protected async void showQuestion()
+    {
+        // TODO:
+        // - Support infinite run when run.questionNb == -1
+        // - Ask for a random question when it's infinite and the questionIdx is greater than the questionIds array size
+        // - Implement lookups in localized dictionaries
+
+        if (activeRun.questionNb <= questionIdx)
+        {
+            // No more questions
+            feedbackTextField.text = $"No more question in run `{activeRun.id}`.";
+            questionTextField.text = "No more questions...";
+            // choice1Button.GetComponentInChildren<Text>().text = "1:";
+            // choice2Button.GetComponentInChildren<Text>().text = "2:";
+            // choice3Button.GetComponentInChildren<Text>().text = "3:";
+            // choice4Button.GetComponentInChildren<Text>().text = "4:";
+            // choice5Button.GetComponentInChildren<Text>().text = "5:";
+            choice1Button.interactable = false;
+            choice2Button.interactable = false;
+            choice3Button.interactable = false;
+            choice4Button.interactable = false;
+            choice5Button.interactable = false;
+            return;
+        }
+
+        QuestionService service = QuestionService.GetInstance(gameConfig, authToken, forceReload);
+
+        try 
+        {
+            Question question = await service.Get(activeRun.questionIds[questionIdx]);
+            questionTextField.text = "Q: " + (question.useShort ? question.shortQuestionId : question.longQuestionId);
+            choiceDistribution = distributeRandomly(question.choiceNb);
+            updateChoiceButton(choice1Button, 0, question);
+            updateChoiceButton(choice2Button, 1, question);
+            updateChoiceButton(choice3Button, 2, question);
+            updateChoiceButton(choice4Button, 3, question);
+            updateChoiceButton(choice5Button, 4, question);
+            feedbackTextField.text = $"Question {questionIdx + 1} of run `{activeRun.id}` is ready.";
+        }
+        catch (Exception)
+        {
+            feedbackTextField.text = $"Processing question {questionIdx} of run `{activeRun.id}` failed...";
+        }
+    }
+
+    protected System.Random randomGenerator = new System.Random((int) DateTime.Now.Ticks);
+
+    protected List<int> distributeRandomly(int limit)
+    {
+        List<int> temp = new List<int>(limit);
+        for (int j = 0; j < limit; j++)
+        {
+            temp.Add(j);
+        }
+        List<int> output = new List<int>(limit);
+        for (int i = 0; i < limit; i++)
+        {
+            int maxPosition = limit - i;
+            int randomPosition = randomGenerator.Next(maxPosition);
+            int pick = temp[randomPosition];
+            temp.RemoveAt(randomPosition);
+            output.Add(pick);
+        }
+        return output;
+    }
+
+    protected void updateChoiceButton(Button button, int buttonIdx, Question question)
+    {
+        int choiceIdx = choiceDistribution.Count <= buttonIdx ? 1000 : choiceDistribution[buttonIdx];
+
+        if (choiceIdx < question.choiceNb)
+        {
+            button.GetComponentInChildren<Text>().text = (buttonIdx + 1) + ": " + (question.useShort ? question.shortChoiceIds[choiceIdx] : question.longChoiceIds[choiceIdx]);
+            button.interactable = true;
+        }
+        else
+        {
+            button.GetComponentInChildren<Text>().text = (buttonIdx + 1) + ":";
+            button.interactable = false;
+        }
+    }
+
+    public async void _G_ProcessChoice(int buttonIdx)
+    {
+        AnswerService answerService = AnswerService.GetInstance(gameConfig, authToken, forceReload);
+        QuestionService questionService = QuestionService.GetInstance(gameConfig, authToken, forceReload);
+
+        try 
+        {
+            Answer answer = await answerService.Get(activeRun.questionIds[questionIdx]);
+            Question question = await questionService.Get(activeRun.questionIds[questionIdx]);
+            string rightAnswer = question.useShort ? question.shortChoiceIds[answer.validIdx] : question.longChoiceIds[answer.validIdx];
+            int translatedValidIdx = choiceDistribution.Find(idx => idx == buttonIdx); // Find the index of the button which displays the valid answer
+            answerTextField.text = $"Q: {(question.useShort ? question.shortQuestionId : question.longQuestionId)}\nA: {(buttonIdx == translatedValidIdx ? "Youpi!" : "Nope!")} The right anwswer is: {rightAnswer}.";
+        }
+        catch (Exception)
+        {
+            feedbackTextField.text = $"Processing question {questionIdx} of run `{activeRun.id}` failed...";
+        }
+
+        questionIdx += 1;
+        showQuestion();
+    }
 }
