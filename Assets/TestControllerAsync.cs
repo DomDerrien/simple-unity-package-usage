@@ -259,6 +259,7 @@ public class TestControllerAsync : MonoBehaviour
     
     protected int questionIdx = 0;
     protected MatchingRun activeRun;
+    protected int runScore;
 
     public async void _G_StartMatchingRun()
     {
@@ -274,7 +275,9 @@ public class TestControllerAsync : MonoBehaviour
         try
         {
             activeRun = await service.Get(runId);
+            answerTextField.text = "A:";
             questionIdx = 0;
+            runScore = 0;
             showQuestion();
         }
         catch(Exception)
@@ -297,11 +300,11 @@ public class TestControllerAsync : MonoBehaviour
             // No more questions
             feedbackTextField.text = $"No more question in run `{activeRun.id}`.";
             questionTextField.text = "No more questions...";
-            // choice1Button.GetComponentInChildren<Text>().text = "1:";
-            // choice2Button.GetComponentInChildren<Text>().text = "2:";
-            // choice3Button.GetComponentInChildren<Text>().text = "3:";
-            // choice4Button.GetComponentInChildren<Text>().text = "4:";
-            // choice5Button.GetComponentInChildren<Text>().text = "5:";
+            choice1Button.GetComponentInChildren<Text>().text = "1:";
+            choice2Button.GetComponentInChildren<Text>().text = "2:";
+            choice3Button.GetComponentInChildren<Text>().text = "3:";
+            choice4Button.GetComponentInChildren<Text>().text = "4:";
+            choice5Button.GetComponentInChildren<Text>().text = "5:";
             choice1Button.interactable = false;
             choice2Button.interactable = false;
             choice3Button.interactable = false;
@@ -376,9 +379,12 @@ public class TestControllerAsync : MonoBehaviour
         {
             Answer answer = await answerService.Get(activeRun.questionIds[questionIdx]);
             Question question = await questionService.Get(activeRun.questionIds[questionIdx]);
-            string rightAnswer = question.useShort ? question.shortChoiceIds[answer.validIdx] : question.longChoiceIds[answer.validIdx];
-            int translatedValidIdx = choiceDistribution.Find(idx => idx == buttonIdx); // Find the index of the button which displays the valid answer
-            answerTextField.text = $"Q: {(question.useShort ? question.shortQuestionId : question.longQuestionId)}\nA: {(buttonIdx == translatedValidIdx ? "Youpi!" : "Nope!")} The right anwswer is: {rightAnswer}.";
+            string initialQuestionText = question.useShort ? question.shortQuestionId : question.longQuestionId;
+            string rightAnswerText = question.useShort ? question.shortChoiceIds[answer.validIdx] : question.longChoiceIds[answer.validIdx];
+            int translatedValidIdx = choiceDistribution.FindIndex(idx => idx == answer.validIdx); // Find the index of the button which displays the valid answer
+            bool success = buttonIdx == translatedValidIdx;
+            runScore += success ? answer.scoreWeight : 0;
+            answerTextField.text = $"Q: {initialQuestionText}\nA: {(success ? "Youpi!" : "Nope!")} The right anwswer is: {rightAnswerText}.\nYour score for this run is: {runScore} points!";
         }
         catch (Exception)
         {

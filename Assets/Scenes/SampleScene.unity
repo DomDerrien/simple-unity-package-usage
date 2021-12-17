@@ -7020,7 +7020,7 @@ MonoBehaviour:
   stockCardIdInputField: {fileID: 1750711650}
   stockCardIdsInputField: {fileID: 0}
   questionTextField: {fileID: 571704316}
-  answerTextField: {fileID: 0}
+  answerTextField: {fileID: 1877225392}
   choice1Button: {fileID: 1378950017}
   choice2Button: {fileID: 1734669517}
   choice3Button: {fileID: 60030404}
